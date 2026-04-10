@@ -1,0 +1,30 @@
+{
+  "name": "lafalize",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "concurrently \"vite build --watch\" \"npx serve dist --cors -l 3000\" \"~/.local/bin/cloudflared tunnel --url http://localhost:3000 2>&1 | grep -E 'trycloudflare|https://'\"",
+    "tunnel": "~/.local/bin/cloudflared tunnel --url http://localhost:3000"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nslt-studio/lafalize.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nslt-studio/lafalize/issues"
+  },
+  "homepage": "https://github.com/nslt-studio/lafalize#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "serve": "^14.2.6",
+    "vite": "^8.0.8"
+  },
+  "dependencies": {
+    "swup": "^4.8.3"
+  }
+}
