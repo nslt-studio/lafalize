@@ -129,6 +129,51 @@ function initNavIndexes() {
   });
 }
 
+function initInquiry() {
+  const inquiry = document.querySelector(".inquiry");
+  const overlay = document.querySelector(".overlay");
+  if (!inquiry) return;
+
+  function isWinePopupOpen() {
+    const popup = document.querySelector(".wine-popup");
+    return popup ? popup.style.transform === "translateX(0%)" : false;
+  }
+
+  function open() {
+    inquiry.style.transform = "translateX(0%)";
+    inquiry.style.pointerEvents = "auto";
+    if (overlay && !isWinePopupOpen()) {
+      overlay.style.opacity = "1";
+      overlay.style.pointerEvents = "auto";
+    }
+    document.body.style.overflow = "hidden";
+  }
+
+  function close() {
+    inquiry.style.transform = "translateX(100%)";
+    inquiry.style.pointerEvents = "none";
+    if (overlay && !isWinePopupOpen()) {
+      overlay.style.opacity = "0";
+      overlay.style.pointerEvents = "none";
+    }
+    document.body.style.overflow = "";
+  }
+
+  document.querySelectorAll("[data-button='inquiry']").forEach((btn) => {
+    btn.addEventListener("click", open);
+  });
+
+  inquiry.querySelector(".close-button")?.addEventListener("click", close);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+  });
+
+  if (overlay) {
+    overlay.addEventListener("click", close);
+  }
+}
+
 function initArchives() {
   const btn = document.getElementById("archivesButton");
   const archives = document.querySelector(".archives");
@@ -165,6 +210,7 @@ const setCurrentMainLink = initMainLinks();
 initNavAnchors(setCurrentMainLink);
 initNavIndexes();
 initArchives();
+initInquiry();
 initPage();
 
 // Clear active nav-link on page leave
@@ -179,6 +225,7 @@ swup.hooks.on("visit:end", () => {
   initNavAnchors(setCurrentMainLink);
   initNavIndexes();
   initArchives();
+  initInquiry();
   initPage();
   if (pendingSection) {
     document.querySelectorAll("[nav-section].active").forEach((l) => l.classList.remove("active"));
