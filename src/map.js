@@ -1,10 +1,11 @@
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-// Token lu depuis window.MAPBOX_TOKEN (injecté dans Webflow custom code)
-// Style et zoom modifiables ici
+// ─── À modifier ───────────────────────────────────────────────────────────────
+const MAPBOX_TOKEN = "pk.eyJ1IjoibnNsdC1zdHVkaW8iLCJhIjoiY21vNXRqd2lqMWt6azJ4cjA1aWh1Z25sYyJ9.lM5IBU3MKEG4BAWqZWNxjA";
 const MAPBOX_STYLE = "mapbox://styles/nslt-studio/cmo5uh0fp000i01sec2g2b16g";
 const MAPBOX_ZOOM  = 13;
+// ──────────────────────────────────────────────────────────────────────────────
 
 export function initMap() {
   const mapEl = document.getElementById("map");
@@ -30,9 +31,7 @@ export function initMap() {
   // Detach pin elements before Mapbox wipes the container
   pins.forEach(({ el }) => el.remove());
 
-  const token = window.MAPBOX_TOKEN;
-  if (!token) { console.warn("initMap: window.MAPBOX_TOKEN is not defined"); return; }
-  mapboxgl.accessToken = token;
+  mapboxgl.accessToken = MAPBOX_TOKEN;
 
   // Determine initial center from the first active map-button (or first button)
   const initialBtn = mapBtns.find((b) => b.classList.contains("active")) || mapBtns[0];
