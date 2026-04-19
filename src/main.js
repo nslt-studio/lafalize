@@ -1,7 +1,11 @@
 import Swup from "swup";
+import { initNextPage } from "./utils.js";
 import { initHome } from "./home.js";
 import { initWine } from "./wine.js";
 import { initAbout } from "./about.js";
+import { initNews } from "./news.js";
+import { initArchivesPage } from "./archives.js";
+import { initMap } from "./map.js";
 
 const swup = new Swup();
 
@@ -134,15 +138,15 @@ function initInquiry() {
   const overlay = document.querySelector(".overlay");
   if (!inquiry) return;
 
-  function isWinePopupOpen() {
-    const popup = document.querySelector(".wine-popup");
+  function isCollectionPopupOpen() {
+    const popup = document.querySelector(".collection-popup");
     return popup ? popup.style.transform === "translateX(0%)" : false;
   }
 
   function open() {
     inquiry.style.transform = "translateX(0%)";
     inquiry.style.pointerEvents = "auto";
-    if (overlay && !isWinePopupOpen()) {
+    if (overlay && !isCollectionPopupOpen()) {
       overlay.style.opacity = "1";
       overlay.style.pointerEvents = "auto";
     }
@@ -152,7 +156,7 @@ function initInquiry() {
   function close() {
     inquiry.style.transform = "translateX(100%)";
     inquiry.style.pointerEvents = "none";
-    if (overlay && !isWinePopupOpen()) {
+    if (overlay && !isCollectionPopupOpen()) {
       overlay.style.opacity = "0";
       overlay.style.pointerEvents = "none";
     }
@@ -174,26 +178,24 @@ function initInquiry() {
   }
 }
 
-function initArchives() {
-  const btn = document.getElementById("archivesButton");
-  const archives = document.querySelector(".archives");
-  if (!btn || !archives) return;
+
+function initFindUs() {
+  const findUs = document.querySelector(".find-us");
+  if (!findUs) return;
 
   function open() {
-    archives.style.transform = "translateY(0%)";
-    document.body.style.overflow = "hidden";
+    findUs.style.transform = "translateY(0%)";
+    findUs.style.pointerEvents = "auto";
   }
 
   function close() {
-    archives.style.transform = "translateY(100%)";
-    document.body.style.overflow = "";
+    findUs.style.transform = "translateY(100%)";
+    findUs.style.pointerEvents = "none";
   }
 
-  btn.addEventListener("click", open);
-  archives.querySelector(".close-button")?.addEventListener("click", close);
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") close();
-  });
+  document.getElementById("findUs")?.addEventListener("click", open);
+  findUs.querySelector(".close-button")?.addEventListener("click", close);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
 }
 
 function initPage() {
@@ -203,14 +205,18 @@ function initPage() {
   if (page === "home") initHome();
   else if (page === "wine") initWine();
   else if (page === "about") initAbout();
+  else if (page === "news") initNews();
+  else if (page === "archives") initArchivesPage();
 }
 
 // Initial load
 const setCurrentMainLink = initMainLinks();
 initNavAnchors(setCurrentMainLink);
 initNavIndexes();
-initArchives();
+initNextPage();
 initInquiry();
+initFindUs();
+initMap();
 initPage();
 
 // Clear active nav-link on page leave
@@ -224,8 +230,9 @@ swup.hooks.on("visit:end", () => {
   initMainLinks();
   initNavAnchors(setCurrentMainLink);
   initNavIndexes();
-  initArchives();
+  initNextPage();
   initInquiry();
+  initMap();
   initPage();
   if (pendingSection) {
     document.querySelectorAll("[nav-section].active").forEach((l) => l.classList.remove("active"));
