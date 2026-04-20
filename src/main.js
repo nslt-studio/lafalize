@@ -10,25 +10,34 @@ import { initMap } from "./map.js";
 const swup = new Swup();
 
 function initMainLinks() {
-  const mainLinks = document.querySelectorAll(".main-link");
+  // All internal links with a real pathname (excludes anchors-only and external)
+  const allLinks = [...document.querySelectorAll("a[href]")].filter((l) => {
+    try {
+      if (l.target === "_blank" || (l.target && l.target !== "_self")) return false;
+      const url = new URL(l.getAttribute("href"), location.origin);
+      return url.origin === location.origin;
+    } catch { return false; }
+  });
 
   function setCurrentMainLink(pathname) {
-    mainLinks.forEach((l) => l.classList.remove("w--current"));
-    const match = [...mainLinks].find((l) => {
-      const url = new URL(l.getAttribute("href"), location.origin);
-      return url.pathname === pathname;
+    allLinks.forEach((l) => {
+      try {
+        const url = new URL(l.getAttribute("href"), location.origin);
+        l.classList.toggle("w--current", url.pathname === pathname);
+      } catch { /* skip */ }
     });
-    match?.classList.add("w--current");
   }
 
   // Set on load
   setCurrentMainLink(location.pathname);
 
-  // On main-link click
-  mainLinks.forEach((link) => {
+  // On any internal link click
+  allLinks.forEach((link) => {
     link.addEventListener("click", () => {
-      const url = new URL(link.getAttribute("href"), location.origin);
-      setCurrentMainLink(url.pathname);
+      try {
+        const url = new URL(link.getAttribute("href"), location.origin);
+        setCurrentMainLink(url.pathname);
+      } catch { /* skip */ }
     });
   });
 
@@ -129,7 +138,7 @@ function _initNavAnchors(setCurrentMainLink) {
 
 function initNavIndexes() {
   document.querySelectorAll("[nav-index]").forEach((el, i) => {
-    el.textContent = i + 1;
+    el.textContent = `1.${i + 1}`;
   });
 }
 
