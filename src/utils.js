@@ -1,3 +1,13 @@
+export function lockScroll() {
+  document.documentElement.style.overflow = "hidden";
+  document.body.style.overflow = "hidden";
+}
+
+export function unlockScroll() {
+  document.documentElement.style.overflow = "";
+  document.body.style.overflow = "";
+}
+
 export function initCollectionPopup() {
   const popup = document.querySelector(".collection-popup");
   const overlay = document.querySelector(".overlay");
@@ -57,7 +67,7 @@ export function initCollectionPopup() {
     function activateBtn(activeBtn) {
       btns.forEach((b) => (b === activeBtn ? openAccordion(b) : closeAccordion(b)));
     }
-    activateBtn(btns[0]);
+    requestAnimationFrame(() => requestAnimationFrame(() => activateBtn(btns[0])));
     btns.forEach((btn) => {
       btn.addEventListener("click", () => {
         if (!btn.classList.contains("active")) activateBtn(btn);
@@ -70,7 +80,7 @@ export function initCollectionPopup() {
     popup.style.pointerEvents = "auto";
     overlay.style.opacity = "1";
     overlay.style.pointerEvents = "auto";
-    document.body.style.overflow = "hidden";
+    lockScroll();
     switchTab(tabId);
   }
 
@@ -79,7 +89,7 @@ export function initCollectionPopup() {
     popup.style.pointerEvents = "none";
     overlay.style.opacity = "0";
     overlay.style.pointerEvents = "none";
-    document.body.style.overflow = "";
+    unlockScroll();
     setTimeout(() => {
       popup.querySelectorAll("[data-tab]").forEach((t) => t.classList.remove("active"));
       popup.querySelectorAll("[data-info-tab]").forEach((el) => {
@@ -179,7 +189,7 @@ export function initTableAccordion() {
   const firstItem = items[0];
   const firstAccordion = firstItem.querySelector(".table-accordion");
   const firstBtn = firstItem.querySelector("[data-button='more']");
-  if (firstAccordion) open(firstAccordion, firstBtn);
+  if (firstAccordion) requestAnimationFrame(() => requestAnimationFrame(() => open(firstAccordion, firstBtn)));
 
   items.forEach((item) => {
     const accordion = item.querySelector(".table-accordion");

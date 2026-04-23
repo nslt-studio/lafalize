@@ -11,7 +11,17 @@ export function initHome() {
     current = index;
   }
 
-  setInterval(() => {
-    showHero((current + 1) % heroes.length);
-  }, 3000);
+  let timer = setInterval(() => showHero((current + 1) % heroes.length), 3000);
+
+  function resetTimer() {
+    clearInterval(timer);
+    timer = setInterval(() => showHero((current + 1) % heroes.length), 3000);
+  }
+
+  if (window.innerWidth <= 992) {
+    document.addEventListener("click", () => {
+      showHero((current + 1) % heroes.length);
+      resetTimer();
+    });
+  }
 }

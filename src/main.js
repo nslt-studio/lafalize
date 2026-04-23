@@ -1,5 +1,5 @@
 import Swup from "swup";
-import { initNextPage } from "./utils.js";
+import { initNextPage, lockScroll, unlockScroll } from "./utils.js";
 import { initHome } from "./home.js";
 import { initWine } from "./wine.js";
 import { initAbout } from "./about.js";
@@ -47,6 +47,7 @@ function initMainLinks() {
 
 let cleanupNavAnchors = null;
 let pendingSection = null;
+let closeMobileNav = null;
 
 function initNavAnchors(setCurrentMainLink) {
   if (cleanupNavAnchors) cleanupNavAnchors();
@@ -159,7 +160,7 @@ function initInquiry() {
       overlay.style.opacity = "1";
       overlay.style.pointerEvents = "auto";
     }
-    document.body.style.overflow = "hidden";
+    lockScroll();
   }
 
   function close() {
@@ -169,7 +170,7 @@ function initInquiry() {
       overlay.style.opacity = "0";
       overlay.style.pointerEvents = "none";
     }
-    document.body.style.overflow = "";
+    unlockScroll();
   }
 
   document.querySelectorAll("[data-button='inquiry']").forEach((btn) => {
@@ -195,16 +196,48 @@ function initFindUs() {
   function open() {
     findUs.style.transform = "translateY(0%)";
     findUs.style.pointerEvents = "auto";
+    lockScroll();
   }
 
   function close() {
     findUs.style.transform = "translateY(100%)";
     findUs.style.pointerEvents = "none";
+    unlockScroll();
   }
 
   document.getElementById("findUs")?.addEventListener("click", open);
   findUs.querySelector(".close-button")?.addEventListener("click", close);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+}
+
+function initMobileNav() {
+  const nav = document.querySelector(".nav");
+  if (!nav) return;
+
+  const isMobile = () => window.innerWidth <= 992;
+
+  function open() {
+    if (!isMobile()) return;
+    nav.style.transform = "translateX(0%)";
+    nav.style.pointerEvents = "auto";
+    lockScroll();
+  }
+
+  function close() {
+    if (!isMobile()) return;
+    nav.style.transform = "translateX(-100%)";
+    nav.style.pointerEvents = "none";
+    unlockScroll();
+  }
+
+  closeMobileNav = close;
+
+  const menuBtn = document.getElementById("menuButton");
+  menuBtn?.addEventListener("click", open);
+  nav.querySelector(".close-button")?.addEventListener("click", close);
+  document.addEventListener("click", (e) => {
+    if (!nav.contains(e.target) && e.target !== menuBtn) close();
+  });
 }
 
 function initPage() {
@@ -225,6 +258,7 @@ initNavIndexes();
 initNextPage();
 initInquiry();
 initFindUs();
+initMobileNav();
 initMap();
 initPage();
 
@@ -232,6 +266,7 @@ initPage();
 swup.hooks.on("visit:start", () => {
   if (cleanupNavAnchors) { cleanupNavAnchors(); cleanupNavAnchors = null; }
   document.querySelectorAll("[nav-section].active").forEach((l) => l.classList.remove("active"));
+  if (closeMobileNav) closeMobileNav();
 });
 
 // After each swup page transition
@@ -241,6 +276,8 @@ swup.hooks.on("visit:end", () => {
   initNavIndexes();
   initNextPage();
   initInquiry();
+  initFindUs();
+  initMobileNav();
   initMap();
   initPage();
   if (pendingSection) {
