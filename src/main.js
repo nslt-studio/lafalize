@@ -77,6 +77,7 @@ function _initNavAnchors(setCurrentMainLink) {
         e.stopImmediatePropagation();
         setActiveLink(section);
         setCurrentMainLink(location.pathname);
+        if (window.innerWidth <= 992 && closeMobileNav) closeMobileNav();
         target.scrollIntoView({ behavior: "smooth" });
       } else {
         setActiveLink(section);

@@ -1,26 +1,32 @@
 export function initHome() {
-  const heroes = [...document.querySelectorAll("[data-hero]")];
-  if (!heroes.length) return;
+  const imgs = [...document.querySelectorAll(".hero-item .hero-img")];
+  if (!imgs.length) return;
 
-  let current = heroes.findIndex((h) => h.classList.contains("active"));
-  if (current === -1) current = 0;
+  let current = 0;
 
-  function showHero(index) {
-    heroes.forEach((h) => h.classList.remove("active"));
-    heroes[index].classList.add("active");
+  function showImg(index) {
+    imgs.forEach((img, i) => (img.style.opacity = i === index ? "1" : "0"));
     current = index;
   }
 
-  let timer = setInterval(() => showHero((current + 1) % heroes.length), 3000);
+  showImg(0);
 
-  function resetTimer() {
-    clearInterval(timer);
-    timer = setInterval(() => showHero((current + 1) % heroes.length), 3000);
-  }
+  if (window.innerWidth > 992) {
+    document.querySelectorAll(".main-link").forEach((link) => {
+      link.addEventListener("mouseenter", () => {
+        showImg((current + 1) % imgs.length);
+      });
+    });
+  } else {
+    let timer = setInterval(() => showImg((current + 1) % imgs.length), 3000);
 
-  if (window.innerWidth <= 992) {
+    function resetTimer() {
+      clearInterval(timer);
+      timer = setInterval(() => showImg((current + 1) % imgs.length), 3000);
+    }
+
     document.addEventListener("click", () => {
-      showHero((current + 1) % heroes.length);
+      showImg((current + 1) % imgs.length);
       resetTimer();
     });
   }
