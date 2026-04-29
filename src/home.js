@@ -18,16 +18,8 @@ export function initHome() {
       });
     });
   } else {
-    let timer = setInterval(() => showImg((current + 1) % imgs.length), 3000);
-
-    function resetTimer() {
-      clearInterval(timer);
-      timer = setInterval(() => showImg((current + 1) % imgs.length), 3000);
-    }
-
     document.addEventListener("click", () => {
       showImg((current + 1) % imgs.length);
-      resetTimer();
     });
   }
 }
