@@ -1,5 +1,6 @@
 import Swup from "swup";
-import { initNextPage, lockScroll, unlockScroll } from "./utils.js";
+import Lenis from "lenis";
+import { initNextPage, lockScroll, unlockScroll, setLenis } from "./utils.js";
 import { initHome } from "./home.js";
 import { initWine } from "./wine.js";
 import { initAbout } from "./about.js";
@@ -8,6 +9,14 @@ import { initArchivesPage } from "./archives.js";
 import { initMap } from "./map.js";
 
 const swup = new Swup();
+
+const lenis = new Lenis();
+setLenis(lenis);
+function lenisRaf(time) {
+  lenis.raf(time);
+  requestAnimationFrame(lenisRaf);
+}
+requestAnimationFrame(lenisRaf);
 
 function initMainLinks() {
   // All internal links with a real pathname (excludes anchors-only and external)

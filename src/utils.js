@@ -1,9 +1,14 @@
+let _lenis = null;
+export function setLenis(instance) { _lenis = instance; }
+
 export function lockScroll() {
+  if (_lenis) { _lenis.stop(); return; }
   document.documentElement.style.overflow = "hidden";
   document.body.style.overflow = "hidden";
 }
 
 export function unlockScroll() {
+  if (_lenis) { _lenis.start(); return; }
   document.documentElement.style.overflow = "";
   document.body.style.overflow = "";
 }

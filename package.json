@@ -25,6 +25,8 @@
     "vite": "^8.0.8"
   },
   "dependencies": {
+    "lenis": "^1.3.23",
+    "mapbox-gl": "^3.22.0",
     "swup": "^4.8.3"
   }
 }
