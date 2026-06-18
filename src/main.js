@@ -1,6 +1,5 @@
 import Swup from "swup";
-import Lenis from "lenis";
-import { initNextPage, lockScroll, unlockScroll, setLenis } from "./utils.js";
+import { initNextPage, lockScroll, unlockScroll } from "./utils.js";
 import { initHome } from "./home.js";
 import { initWine } from "./wine.js";
 import { initAbout } from "./about.js";
@@ -10,17 +9,10 @@ import { initMap } from "./map.js";
 
 const swup = new Swup();
 
-const lenis = new Lenis();
-setLenis(lenis);
-function lenisRaf(time) {
-  lenis.raf(time);
-  requestAnimationFrame(lenisRaf);
-}
-requestAnimationFrame(lenisRaf);
-
 function initMainLinks() {
   // All internal links with a real pathname (excludes anchors-only and external)
   const allLinks = [...document.querySelectorAll("a[href]")].filter((l) => {
+    if (l.classList.contains("locale")) return false;
     try {
       if (l.target === "_blank" || (l.target && l.target !== "_self")) return false;
       const url = new URL(l.getAttribute("href"), location.origin);
@@ -149,7 +141,7 @@ function _initNavAnchors(setCurrentMainLink) {
 
 function initNavIndexes() {
   document.querySelectorAll("[nav-index]").forEach((el, i) => {
-    el.textContent = `1.${i + 1}`;
+    el.textContent = `2.${i + 1}`;
   });
 }
 
@@ -250,6 +242,68 @@ function initMobileNav() {
   });
 }
 
+function syncNavLocaleLinks() {
+  const page = swup.cache.get(location.href) ?? swup.cache.get(location.pathname);
+  if (!page?.html) return;
+  const doc = new DOMParser().parseFromString(page.html, "text/html");
+  const incoming = [...doc.querySelectorAll("a.locale")];
+  document.querySelectorAll("a.locale").forEach((link, i) => {
+    if (!incoming[i]) return;
+    link.setAttribute("href", incoming[i].getAttribute("href"));
+    try {
+      const url = new URL(link.getAttribute("href"), location.origin);
+      link.classList.toggle("w--current", url.pathname === location.pathname);
+    } catch {}
+  });
+}
+
+function detectLocalePrefix(localeLinks) {
+  const current = localeLinks.find(l => {
+    try { return new URL(l.getAttribute("href"), location.origin).pathname === location.pathname; }
+    catch { return false; }
+  });
+  if (!current) return sessionStorage.getItem("lafalize-locale") ?? "";
+
+  const sibling = localeLinks.find(l => l !== current);
+  if (!sibling) return "";
+
+  const cParts = new URL(current.getAttribute("href"), location.origin).pathname.split("/").filter(Boolean);
+  const sParts = new URL(sibling.getAttribute("href"), location.origin).pathname.split("/").filter(Boolean);
+
+  let n = 0;
+  while (n < cParts.length && n < sParts.length && cParts.at(-1 - n) === sParts.at(-1 - n)) n++;
+
+  const prefixParts = cParts.slice(0, cParts.length - n);
+  return prefixParts.length ? "/" + prefixParts.join("/") : "";
+}
+
+function initLocale() {
+  const localeLinks = [...document.querySelectorAll("a.locale")];
+  if (!localeLinks.length) return;
+
+  localeLinks.forEach(link => {
+    try {
+      const url = new URL(link.getAttribute("href"), location.origin);
+      link.classList.toggle("w--current", url.pathname === location.pathname);
+    } catch {}
+  });
+
+  const prefix = detectLocalePrefix(localeLinks);
+  sessionStorage.setItem("lafalize-locale", prefix);
+
+  document.querySelectorAll("a[href]").forEach(link => {
+    if (link.classList.contains("locale")) return;
+    try {
+      const orig = link.dataset.originalHref ?? link.getAttribute("href");
+      const url = new URL(orig, location.origin);
+      if (url.origin !== location.origin) return;
+      if (!link.dataset.originalHref) link.dataset.originalHref = orig;
+      const needsPrefix = prefix && !url.pathname.startsWith(prefix + "/") && url.pathname !== prefix;
+      link.setAttribute("href", (needsPrefix ? prefix : "") + url.pathname + url.search + url.hash);
+    } catch {}
+  });
+}
+
 function initPage() {
   const swupEl = document.getElementById("swup");
   const page = swupEl?.dataset.swup;
@@ -271,6 +325,7 @@ initFindUs();
 initMobileNav();
 initMap();
 initPage();
+initLocale();
 
 // Clear active nav-link on page leave
 swup.hooks.on("visit:start", () => {
@@ -281,6 +336,7 @@ swup.hooks.on("visit:start", () => {
 
 // After each swup page transition
 swup.hooks.on("visit:end", () => {
+  syncNavLocaleLinks();
   initMainLinks();
   initNavAnchors(setCurrentMainLink);
   initNavIndexes();
@@ -290,6 +346,7 @@ swup.hooks.on("visit:end", () => {
   initMobileNav();
   initMap();
   initPage();
+  initLocale();
   if (pendingSection) {
     document.querySelectorAll("[nav-section].active").forEach((l) => l.classList.remove("active"));
     document.querySelector(`[nav-section="${pendingSection}"]`)?.classList.add("active");

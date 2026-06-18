@@ -1,16 +1,42 @@
-let _lenis = null;
-export function setLenis(instance) { _lenis = instance; }
-
 export function lockScroll() {
-  if (_lenis) { _lenis.stop(); return; }
   document.documentElement.style.overflow = "hidden";
   document.body.style.overflow = "hidden";
 }
 
 export function unlockScroll() {
-  if (_lenis) { _lenis.start(); return; }
   document.documentElement.style.overflow = "";
   document.body.style.overflow = "";
+}
+
+export function openAccordion(btn) {
+  const accordion = btn.nextElementSibling;
+  if (!accordion?.classList.contains("tab-info-accordion")) return;
+  const inner = accordion.querySelector(".tab-info-inner");
+  accordion.style.maxHeight = inner ? inner.scrollHeight + "px" : "0px";
+  btn.classList.add("active");
+}
+
+export function closeAccordion(btn) {
+  const accordion = btn.nextElementSibling;
+  if (!accordion?.classList.contains("tab-info-accordion")) return;
+  accordion.style.maxHeight = "0px";
+  btn.classList.remove("active");
+}
+
+export function initAccordion(container) {
+  if (container.dataset.accordionInit) return;
+  container.dataset.accordionInit = "1";
+  const btns = [...container.querySelectorAll("[data-info]")];
+  if (!btns.length) return;
+  function activateBtn(activeBtn) {
+    btns.forEach((b) => (b === activeBtn ? openAccordion(b) : closeAccordion(b)));
+  }
+  requestAnimationFrame(() => requestAnimationFrame(() => activateBtn(btns[0])));
+  btns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!btn.classList.contains("active")) activateBtn(btn);
+    });
+  });
 }
 
 export function initCollectionPopup() {
@@ -47,37 +73,6 @@ export function initCollectionPopup() {
     } else {
       showInfo(nextInfo);
     }
-  }
-
-  function openAccordion(btn) {
-    const accordion = btn.nextElementSibling;
-    if (!accordion?.classList.contains("tab-info-accordion")) return;
-    const inner = accordion.querySelector(".tab-info-inner");
-    accordion.style.maxHeight = inner ? inner.scrollHeight + "px" : "0px";
-    btn.classList.add("active");
-  }
-
-  function closeAccordion(btn) {
-    const accordion = btn.nextElementSibling;
-    if (!accordion?.classList.contains("tab-info-accordion")) return;
-    accordion.style.maxHeight = "0px";
-    btn.classList.remove("active");
-  }
-
-  function initAccordion(infoTab) {
-    if (infoTab.dataset.accordionInit) return;
-    infoTab.dataset.accordionInit = "1";
-    const btns = [...infoTab.querySelectorAll("[data-info]")];
-    if (!btns.length) return;
-    function activateBtn(activeBtn) {
-      btns.forEach((b) => (b === activeBtn ? openAccordion(b) : closeAccordion(b)));
-    }
-    requestAnimationFrame(() => requestAnimationFrame(() => activateBtn(btns[0])));
-    btns.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        if (!btn.classList.contains("active")) activateBtn(btn);
-      });
-    });
   }
 
   function openPopup(tabId) {
@@ -169,6 +164,17 @@ export function initTabs({ tabAttr = "data-tab", infoAttr = "data-tab-info", fad
   });
 }
 
+const ACCORDION_LABELS = {
+  en: { more: "Read more", less: "Read less" },
+  nl: { more: "Meer lezen", less: "Minder lezen" },
+  fr: { more: "Lire Plus", less: "Lire moins" },
+};
+
+function getAccordionLabels() {
+  const locale = location.pathname.split("/").filter(Boolean)[0];
+  return ACCORDION_LABELS[locale] ?? ACCORDION_LABELS.fr;
+}
+
 export function initTableAccordion() {
   const items = [...document.querySelectorAll(".table-list .table-item")];
   if (!items.length) return;
@@ -179,14 +185,14 @@ export function initTableAccordion() {
   function open(accordion, btn) {
     const inner = accordion.querySelector(".table-accordion-inner");
     accordion.style.maxHeight = inner ? inner.scrollHeight + "px" : "";
-    if (btn) btn.textContent = "Lire moins";
+    if (btn) btn.textContent = getAccordionLabels().less;
     current = accordion;
     currentBtn = btn;
   }
 
   function close(accordion, btn) {
     accordion.style.maxHeight = "";
-    if (btn) btn.textContent = "Lire Plus";
+    if (btn) btn.textContent = getAccordionLabels().more;
     if (current === accordion) { current = null; currentBtn = null; }
   }
 
