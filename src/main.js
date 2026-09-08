@@ -1,5 +1,5 @@
 import Swup from "swup";
-import { initNextPage, lockScroll, unlockScroll } from "./utils.js";
+import { initNextPage, initImgFadeIn, lockScroll, unlockScroll } from "./utils.js";
 import { initHome } from "./home.js";
 import { initWine } from "./wine.js";
 import { initAbout } from "./about.js";
@@ -326,6 +326,7 @@ initMobileNav();
 initMap();
 initPage();
 initLocale();
+initImgFadeIn();
 
 // Clear active nav-link on page leave
 swup.hooks.on("visit:start", () => {
@@ -347,6 +348,7 @@ swup.hooks.on("visit:end", () => {
   initMap();
   initPage();
   initLocale();
+  initImgFadeIn();
   if (pendingSection) {
     document.querySelectorAll("[nav-section].active").forEach((l) => l.classList.remove("active"));
     document.querySelector(`[nav-section="${pendingSection}"]`)?.classList.add("active");

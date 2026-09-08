@@ -214,6 +214,19 @@ export function initTableAccordion() {
   });
 }
 
+export function initImgFadeIn() {
+  document.querySelectorAll("img:not(.video-poster)").forEach((img) => {
+    if (img.dataset.fadeInit) return;
+    img.dataset.fadeInit = "1";
+    if (img.complete && img.naturalWidth > 0) {
+      img.style.opacity = "1";
+      return;
+    }
+    img.addEventListener("load", () => (img.style.opacity = "1"), { once: true });
+    img.addEventListener("error", () => (img.style.opacity = "1"), { once: true });
+  });
+}
+
 export function initNextPage() {
   const nextPage = document.querySelector(".next-page");
   if (!nextPage) return;
