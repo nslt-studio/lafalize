@@ -1,4 +1,8 @@
+import EmblaCarousel from "embla-carousel";
+import AutoScroll from "embla-carousel-auto-scroll";
 import { initTabs, initCollectionPopup } from "./utils.js";
+
+const EMBLA_AUTOSCROLL_SPEED = 1; // px par tick — vitesse de base du défilement continu
 
 export function initAbout() {
   initCollectionPopup();
@@ -8,6 +12,67 @@ export function initAbout() {
   initSliders();
   initTabs({ infoAttr: "data-info-tab" });
   initThumbSlider();
+  initEmblaCarousel();
+}
+
+let emblaApi = null;
+
+function initEmblaCarousel() {
+  // Détruit toute instance précédente avant d'en recréer une (page revisitée,
+  // transition Swup...) pour ne jamais avoir deux carrousels actifs en même
+  // temps sur le même élément.
+  emblaApi?.destroy();
+  emblaApi = null;
+
+  // Embla s'initialise sur le viewport (overflow hidden), dont l'enfant
+  // direct doit être le container — pas le wrapper .embla englobant.
+  const viewport = document.querySelector(".embla .embla__viewport");
+  if (!viewport) return;
+
+  const container = viewport.querySelector(".embla__container");
+  if (!container) return;
+
+  // Retire d'éventuels clones ajoutés lors d'une précédente init (au cas où
+  // ce DOM ne serait pas recréé à chaque transition Swup).
+  container.querySelectorAll("[data-embla-clone]").forEach((el) => el.remove());
+
+  // Le loop natif d'Embla ne reste parfaitement infini (y compris pendant un
+  // grab rapide/répété) que s'il y a assez de largeur totale de slides —
+  // avec seulement 5 slides ça peut ne pas suffire. On duplique le contenu
+  // jusqu'à couvrir au moins 3x la largeur du viewport, pour ne jamais
+  // "tomber à court" de clones pendant le drag.
+  const originalSlides = [...container.children];
+  let guard = 0;
+  while (originalSlides.length && container.scrollWidth < viewport.clientWidth * 3 && guard < 10) {
+    originalSlides.forEach((slide) => {
+      const clone = slide.cloneNode(true);
+      clone.setAttribute("data-embla-clone", "");
+      container.appendChild(clone);
+    });
+    guard++;
+  }
+
+  viewport.style.cursor = "grab";
+
+  emblaApi = EmblaCarousel(
+    viewport,
+    {
+      loop: true,
+      align: "start",
+      watchDrag: true,
+      dragFree: true, // pas de snap sur une slide : le relâchement garde l'inertie/la vitesse du geste, avec décélération naturelle
+    },
+    [
+      AutoScroll({
+        speed: EMBLA_AUTOSCROLL_SPEED,
+        startDelay: 0, // démarre tout de suite, sans pause
+        stopOnInteraction: false, // reprend le défilement continu après un grab
+      }),
+    ]
+  );
+
+  emblaApi.on("pointerDown", () => { viewport.style.cursor = "grabbing"; });
+  emblaApi.on("pointerUp", () => { viewport.style.cursor = "grab"; });
 }
 
 function initThumbSlider() {

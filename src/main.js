@@ -1,5 +1,6 @@
 import Swup from "swup";
-import { initNextPage, initImgFadeIn, lockScroll, unlockScroll } from "./utils.js";
+import Lenis from "lenis";
+import { initNextPage, initImgFadeIn, lockScroll, unlockScroll, setLenis } from "./utils.js";
 import { initHome } from "./home.js";
 import { initWine } from "./wine.js";
 import { initAbout } from "./about.js";
@@ -8,6 +9,82 @@ import { initArchivesPage } from "./archives.js";
 import { initMap } from "./map.js";
 
 const swup = new Swup();
+
+const lenis = new Lenis();
+setLenis(lenis);
+function lenisRaf(time) {
+  lenis.raf(time);
+  requestAnimationFrame(lenisRaf);
+}
+requestAnimationFrame(lenisRaf);
+
+const ANCHOR_SCROLL_OFFSET = 150; // px de marge par rapport au top du viewport
+
+// Le contenu (et donc la hauteur scrollable) change à chaque transition Swup :
+// on force Lenis à recalculer la hauteur de la nouvelle page.
+swup.hooks.on("content:replace", () => {
+  lenis.resize();
+
+  // Filet de sécurité : du contenu peut encore changer de hauteur après ce
+  // premier calcul (images, vidéos, accordéons qui s'ouvrent...) — Lenis a
+  // bien un ResizeObserver interne, mais on recalcule aussi explicitement à
+  // quelques instants clés pour ne jamais rester bloqué avec une hauteur trop
+  // courte (scroll qui ne va pas jusqu'au vrai bas de la page).
+  requestAnimationFrame(() => lenis.resize());
+  setTimeout(() => lenis.resize(), 500);
+  setTimeout(() => lenis.resize(), 1500);
+});
+
+// Swup a son propre mécanisme natif de scroll après transition (scroll:anchor
+// pour un lien avec #hash, scroll:top sinon) — mais il utilise l'API native
+// scrollIntoView/scrollTo, pas Lenis, et sans la marge de 150px. On le
+// remplace entièrement pour que TOUT lien avec une ancre vers une autre page
+// (pas seulement ceux du menu) respecte la marge, via Lenis.
+swup.hooks.replace("scroll:anchor", (visit, { hash }) => {
+  const target = hash && document.getElementById(hash.replace(/^#/, ""));
+  if (!target) return false;
+  lenis.scrollTo(target, { offset: -ANCHOR_SCROLL_OFFSET, immediate: true });
+  return true;
+});
+
+swup.hooks.replace("scroll:top", () => {
+  lenis.scrollTo(0, { immediate: true });
+  return true;
+});
+
+// Footer plein écran (.footer, 100dvh) : révélé une fois arrivé (à une marge
+// près) en bas de la page, masqué dès qu'on remonte ou qu'on quitte la page.
+// Certaines pages (home, et toute future page) n'ont pas de .footer : on ne
+// fait alors rien.
+//
+// Basé sur la position réelle du bas de .footer (getBoundingClientRect),
+// recalculée à chaque frame de scroll Lenis — pas sur un ratio
+// d'IntersectionObserver (jamais fiable à exactement 1 sur un élément en
+// 100dvh, à cause des arrondis sous-pixel/barre d'adresse mobile) ni sur la
+// hauteur totale du document (peut être temporairement fausse juste après
+// une transition Swup). Le plus robuste : une vérification géométrique
+// directe, à jour à chaque instant, peu importe ce qui se passe ailleurs.
+const FOOTER_REVEAL_MARGIN = 150; // px avant le vrai bas de page
+let footerRevealed = false;
+
+function setFooterRevealed(revealed) {
+  if (revealed === footerRevealed) return;
+  footerRevealed = revealed;
+  const footer = document.querySelector(".footer");
+  const nav = document.querySelector(".nav");
+  if (footer) footer.style.opacity = revealed ? "1" : "0";
+  if (nav) {
+    nav.style.opacity = revealed ? "0" : "1";
+    nav.style.pointerEvents = revealed ? "none" : "auto";
+  }
+}
+
+lenis.on("scroll", () => {
+  const footer = document.querySelector(".footer");
+  if (!footer) { setFooterRevealed(false); return; }
+  const reachedBottom = footer.getBoundingClientRect().bottom <= window.innerHeight + FOOTER_REVEAL_MARGIN;
+  setFooterRevealed(reachedBottom);
+});
 
 function initMainLinks() {
   // All internal links with a real pathname (excludes anchors-only and external)
@@ -79,7 +156,7 @@ function _initNavAnchors(setCurrentMainLink) {
         setActiveLink(section);
         setCurrentMainLink(location.pathname);
         if (window.innerWidth <= 992 && closeMobileNav) closeMobileNav();
-        target.scrollIntoView({ behavior: "smooth" });
+        lenis.scrollTo(target, { offset: -ANCHOR_SCROLL_OFFSET });
       } else {
         setActiveLink(section);
         pendingSection = section;
@@ -242,6 +319,68 @@ function initMobileNav() {
   });
 }
 
+function initNavAccordions() {
+  const nav = document.querySelector(".nav");
+  if (!nav) return;
+
+  const links = [...nav.querySelectorAll("[data-link]")];
+  const accordions = [...nav.querySelectorAll("[data-accordion]")];
+
+  function buttonFor(value) {
+    return nav.querySelector(`[data-button="${value}"]`);
+  }
+
+  function setOpen(acc, open) {
+    acc.style.maxHeight = open ? acc.scrollHeight + "px" : "0px";
+    const btn = buttonFor(acc.getAttribute("data-accordion"));
+    if (btn) btn.textContent = open ? "-" : "+";
+  }
+
+  // data-link : ouverture exclusive (ferme les autres) au clic sur un lien de page
+  function openExclusive(value) {
+    accordions.forEach((acc) => setOpen(acc, acc.getAttribute("data-accordion") === value));
+  }
+
+  // data-button : ouverture/fermeture indépendante, sans toucher aux autres
+  function toggle(value) {
+    const acc = accordions.find((a) => a.getAttribute("data-accordion") === value);
+    if (!acc) return;
+    const isOpen = acc.style.maxHeight && acc.style.maxHeight !== "0px";
+    setOpen(acc, !isOpen);
+  }
+
+  // Écouteurs posés une seule fois par élément (au cas où .nav ne serait pas
+  // recréé à chaque transition Swup) — sinon ils s'accumulent et un clic finit
+  // par déclencher le toggle plusieurs fois d'un coup (annulation silencieuse).
+  if (!nav.dataset.accordionsBound) {
+    nav.dataset.accordionsBound = "1";
+
+    links.forEach((link) => {
+      link.addEventListener("click", () => openExclusive(link.getAttribute("data-link")));
+    });
+
+    nav.querySelectorAll("[data-button]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        // Empêche une navigation/ouverture exclusive accidentelle si le bouton
+        // est un <a> (Webflow) ou imbriqué dans un [data-link]
+        e.preventDefault();
+        e.stopPropagation();
+        toggle(btn.getAttribute("data-button"));
+      });
+    });
+  }
+
+  // Fermés par défaut (ex. page sans accordéon correspondant) — reste toujours
+  // ouvrable/fermable ensuite via data-link ou data-button
+  accordions.forEach((acc) => setOpen(acc, false));
+
+  // Ouvre l'accordéon de la page courante au chargement / après transition
+  const current = links.find((link) => link.classList.contains("w--current"));
+  if (current) {
+    requestAnimationFrame(() => requestAnimationFrame(() => openExclusive(current.getAttribute("data-link"))));
+  }
+}
+
 function syncNavLocaleLinks() {
   const page = swup.cache.get(location.href) ?? swup.cache.get(location.pathname);
   if (!page?.html) return;
@@ -323,6 +462,7 @@ initNextPage();
 initInquiry();
 initFindUs();
 initMobileNav();
+initNavAccordions();
 initMap();
 initPage();
 initLocale();
@@ -333,6 +473,7 @@ swup.hooks.on("visit:start", () => {
   if (cleanupNavAnchors) { cleanupNavAnchors(); cleanupNavAnchors = null; }
   document.querySelectorAll("[nav-section].active").forEach((l) => l.classList.remove("active"));
   if (closeMobileNav) closeMobileNav();
+  setFooterRevealed(false);
 });
 
 // After each swup page transition
@@ -345,6 +486,7 @@ swup.hooks.on("visit:end", () => {
   initInquiry();
   initFindUs();
   initMobileNav();
+  initNavAccordions();
   initMap();
   initPage();
   initLocale();
