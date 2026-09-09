@@ -278,6 +278,8 @@ export function initImgFadeIn() {
   });
 }
 
+const NEXT_IMG_FOLLOW_LERP = 0.1; // 0-1 : plus petit = plus d'inertie, 1 = suivi instantané
+
 export function initNextPage() {
   const nextPage = document.querySelector(".next-page");
   if (!nextPage) return;
@@ -302,7 +304,7 @@ export function initNextPage() {
 
   function onEnter(activeSection) {
     imgItems.forEach((item) => {
-      item.style.filter = getSection(item) === activeSection ? "" : "grayscale(100%)";
+      item.style.opacity = getSection(item) === activeSection ? "" : "0.1";
     });
     textItems.forEach((item) => {
       item.style.opacity = getSection(item) === activeSection ? "" : "0.35";
@@ -310,12 +312,97 @@ export function initNextPage() {
   }
 
   function onLeave() {
-    imgItems.forEach((item) => (item.style.filter = ""));
+    imgItems.forEach((item) => (item.style.opacity = ""));
     textItems.forEach((item) => (item.style.opacity = ""));
   }
 
   [...imgItems, ...textItems].forEach((item) => {
     item.addEventListener("mouseenter", () => onEnter(getSection(item)));
     item.addEventListener("mouseleave", onLeave);
+  });
+
+  // La .next-img de l'item survolé suit le curseur en son centre, agrandie à
+  // 40dvh — et reprend immédiatement (sans transition) sa position/taille
+  // d'origine dès qu'on quitte l'item.
+  imgItems.forEach((item) => {
+    // Base commune : l'item survolé repasse à 0 (cf. plus bas), donc ses
+    // voisins doivent être au-dessus pour ne jamais être recouverts par
+    // l'image agrandie qui déborde de son item d'origine.
+    item.style.zIndex = "1";
+
+    const img = item.querySelector(".next-img");
+    if (!img) return;
+
+    let halfWidth = 0;
+    let halfHeight = 0;
+    let target = { x: 0, y: 0 };
+    let current = { x: 0, y: 0 };
+    let rafId = null;
+
+    function apply() {
+      current.x += (target.x - current.x) * NEXT_IMG_FOLLOW_LERP;
+      current.y += (target.y - current.y) * NEXT_IMG_FOLLOW_LERP;
+      img.style.left = `${current.x - halfWidth}px`;
+      img.style.top = `${current.y - halfHeight}px`;
+      rafId = requestAnimationFrame(apply);
+    }
+
+    function targetFromEvent(e) {
+      const itemRect = item.getBoundingClientRect();
+      target = { x: e.clientX - itemRect.left, y: e.clientY - itemRect.top };
+    }
+
+    item.addEventListener("mouseenter", (e) => {
+      const itemRect = item.getBoundingClientRect();
+
+      // Verrouille la hauteur d'origine du container : l'image peut grandir
+      // et déborder visuellement, mais l'item ne grandit pas avec elle (pas
+      // de saut de mise en page, et la zone de survol reste celle d'origine).
+      item.style.height = itemRect.height + "px";
+      item.style.zIndex = "0";
+      if (getComputedStyle(item).position === "static") item.style.position = "relative";
+
+      // Bascule en absolute sans saut visuel : on fige d'abord sa position
+      // actuelle (relative à l'item), puis seulement ensuite on l'agrandit —
+      // comme ça .next-img-item et ses voisins ne bougent jamais.
+      const imgRect = img.getBoundingClientRect();
+      img.style.position = "absolute";
+      img.style.margin = "0";
+      img.style.left = `${imgRect.left - itemRect.left}px`;
+      img.style.top = `${imgRect.top - itemRect.top}px`;
+      img.style.pointerEvents = "none";
+      img.style.height = "40dvh";
+      img.style.width = "auto";
+
+      const newRect = img.getBoundingClientRect();
+      halfWidth = newRect.width / 2;
+      halfHeight = newRect.height / 2;
+
+      // Premier positionnement instantané, pile sur le curseur à l'entrée
+      // (current = target) — l'inertie ne s'applique qu'aux mouvements
+      // suivants, pas à cette mise en place initiale.
+      target = { x: e.clientX - itemRect.left, y: e.clientY - itemRect.top };
+      current = { ...target };
+      img.style.left = `${current.x - halfWidth}px`;
+      img.style.top = `${current.y - halfHeight}px`;
+
+      item.addEventListener("mousemove", targetFromEvent);
+      rafId = requestAnimationFrame(apply);
+    });
+
+    item.addEventListener("mouseleave", () => {
+      item.removeEventListener("mousemove", targetFromEvent);
+      cancelAnimationFrame(rafId);
+      rafId = null;
+      img.style.position = "";
+      img.style.margin = "";
+      img.style.left = "";
+      img.style.top = "";
+      img.style.height = "";
+      img.style.width = "";
+      img.style.pointerEvents = "";
+      item.style.height = "";
+      item.style.zIndex = "1";
+    });
   });
 }
