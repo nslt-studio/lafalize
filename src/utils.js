@@ -371,7 +371,7 @@ export function initNextPage() {
       img.style.left = `${imgRect.left - itemRect.left}px`;
       img.style.top = `${imgRect.top - itemRect.top}px`;
       img.style.pointerEvents = "none";
-      img.style.height = "40dvh";
+      img.style.height = "50dvh";
       img.style.width = "auto";
 
       const newRect = img.getBoundingClientRect();
