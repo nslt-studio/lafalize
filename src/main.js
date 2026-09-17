@@ -72,10 +72,15 @@ function setFooterRevealed(revealed) {
   footerRevealed = revealed;
   const footer = document.querySelector(".footer");
   const nav = document.querySelector(".nav");
+  const menuBtn = document.getElementById("menuButton");
   if (footer) footer.style.opacity = revealed ? "1" : "0";
   if (nav) {
     nav.style.opacity = revealed ? "0" : "1";
     nav.style.pointerEvents = revealed ? "none" : "auto";
+  }
+  if (menuBtn) {
+    menuBtn.style.opacity = revealed ? "0" : "1";
+    menuBtn.style.pointerEvents = revealed ? "none" : "auto";
   }
 }
 
@@ -294,28 +299,50 @@ function initMobileNav() {
   if (!nav) return;
 
   const isMobile = () => window.innerWidth <= 992;
+  const menuBtn = document.getElementById("menuButton");
+  const overlay = document.querySelector(".overlay");
+  let isOpen = false;
+
+  function setLabel() {
+    if (menuBtn) menuBtn.textContent = isOpen ? "Menu -" : "Menu +";
+  }
 
   function open() {
     if (!isMobile()) return;
+    isOpen = true;
     nav.style.transform = "translateX(0%)";
     nav.style.pointerEvents = "auto";
+    if (overlay) {
+      overlay.style.opacity = "1";
+      overlay.style.pointerEvents = "auto";
+    }
     lockScroll();
+    setLabel();
   }
 
   function close() {
     if (!isMobile()) return;
+    isOpen = false;
     nav.style.transform = "translateX(-100%)";
     nav.style.pointerEvents = "none";
+    if (overlay) {
+      overlay.style.opacity = "0";
+      overlay.style.pointerEvents = "none";
+    }
     unlockScroll();
+    setLabel();
   }
 
   closeMobileNav = close;
 
-  const menuBtn = document.getElementById("menuButton");
-  menuBtn?.addEventListener("click", open);
-  nav.querySelector(".close-button")?.addEventListener("click", close);
+  // Un seul bouton fait office d'ouverture/fermeture (toggle) — il n'y a
+  // plus de close-button séparé dans le nav.
+  menuBtn?.addEventListener("click", () => (isOpen ? close() : open()));
+
+  // Clic en dehors du nav ET du bouton (contains(), pas ===, car le clic
+  // peut atterrir sur un enfant du bouton comme son texte/icône).
   document.addEventListener("click", (e) => {
-    if (!nav.contains(e.target) && e.target !== menuBtn) close();
+    if (isOpen && !nav.contains(e.target) && !menuBtn?.contains(e.target)) close();
   });
 }
 
@@ -421,6 +448,13 @@ function initLocale() {
   if (!localeLinks.length) return;
 
   localeLinks.forEach(link => {
+    // Un changement de langue doit recharger toute la page (nav, footer,
+    // tout ce qui vit en dehors de #swup) plutôt que de passer par la
+    // transition AJAX de Swup, qui ne remplace que le contenu du container
+    // et laisse le reste dans l'ancienne langue. data-no-swup est reconnu
+    // nativement par Swup (son ignoreVisit par défaut) pour exclure un lien
+    // de l'interception — l'href pointe déjà vers la bonne page/préfixe.
+    link.setAttribute("data-no-swup", "");
     try {
       const url = new URL(link.getAttribute("href"), location.origin);
       link.classList.toggle("w--current", url.pathname === location.pathname);

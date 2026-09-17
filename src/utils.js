@@ -316,6 +316,11 @@ export function initNextPage() {
     textItems.forEach((item) => (item.style.opacity = ""));
   }
 
+  // Effet de hover réservé au desktop : pas de mouseenter/mousemove fiable
+  // sur mobile/tablette, et l'image géante qui suit le curseur n'aurait pas
+  // de sens au toucher.
+  if (window.innerWidth <= 992) return;
+
   [...imgItems, ...textItems].forEach((item) => {
     item.addEventListener("mouseenter", () => onEnter(getSection(item)));
     item.addEventListener("mouseleave", onLeave);
